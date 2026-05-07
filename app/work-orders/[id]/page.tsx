@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AssignVendorForm } from "./assignment-actions";
+import { AttachProofTemplateForm, ProofSubmissionPanel } from "./proof-actions";
 
 function statusBadge(status: string) {
   const base = "rounded-full px-3 py-1 text-xs font-semibold ring-1";
@@ -29,6 +30,18 @@ export default async function WorkOrderDetailPage({ params }: { params: { id: st
     where: { organizationId: workOrder.organizationId },
     orderBy: [{ eligibilityStatus: "asc" }, { legalName: "asc" }]
   });
+
+  const proofTemplates = await prisma.proofTemplate.findMany({
+    where: { organizationId: workOrder.organizationId },
+    orderBy: [{ jobCategory: "asc" }, { name: "asc" }]
+  });
+
+  const proofTemplate = workOrder.proofTemplateId
+    ? await prisma.proofTemplate.findUnique({
+        where: { id: workOrder.proofTemplateId },
+        include: { requirements: { orderBy: { sortOrder: "asc" } } }
+      })
+    : null;
 
   return (
     <main className="min-h-screen bg-background px-6 py-8 text-foreground">
@@ -72,11 +85,11 @@ export default async function WorkOrderDetailPage({ params }: { params: { id: st
                 <p className="mt-4 text-sm text-muted">No vendor assigned yet.</p>
               )}
             </div>
+
+            <AssignVendorForm workOrderId={workOrder.id} vendors={vendors} />
           </div>
 
           <div className="space-y-6">
-            <AssignVendorForm workOrderId={workOrder.id} vendors={vendors} />
-
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="text-xl font-semibold">Proof-to-pay state</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -93,6 +106,31 @@ export default async function WorkOrderDetailPage({ params }: { params: { id: st
                   <p className="mt-2 text-sm font-semibold">{workOrder.payout?.status || "Not ready"}</p>
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-xl font-semibold">Proof pack</h2>
+              {proofTemplate ? (
+                <>
+                  <div className="mt-3 rounded-xl border border-border bg-background p-4 text-sm">
+                    <p className="font-semibold">{proofTemplate.name}</p>
+                    <p className="mt-1 text-muted">{proofTemplate.description || "No description."}</p>
+                  </div>
+                  <div className="mt-4">
+                    <ProofSubmissionPanel
+                      workOrderId={workOrder.id}
+                      vendorId={workOrder.vendorId}
+                      requirements={proofTemplate.requirements}
+                      submissions={workOrder.proofSubmissions}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="mt-4 space-y-4">
+                  <p className="text-sm text-muted">No proof template attached. Attach one before allowing proof submission.</p>
+                  <AttachProofTemplateForm workOrderId={workOrder.id} proofTemplates={proofTemplates} />
+                </div>
+              )}
             </div>
           </div>
         </div>
