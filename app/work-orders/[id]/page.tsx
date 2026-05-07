@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AssignVendorForm } from "./assignment-actions";
 import { AttachProofTemplateForm, ProofSubmissionPanel } from "./proof-actions";
+import { InvoiceReviewButtons, ReleasePayoutButton, SubmitInvoiceForm } from "./invoice-actions";
 
 function statusBadge(status: string) {
   const base = "rounded-full px-3 py-1 text-xs font-semibold ring-1";
-  if (["PAYOUT_READY", "PAID", "APPROVED"].includes(status)) return `${base} bg-success/15 text-success ring-success/30`;
-  if (["PAYOUT_HOLD", "AWAITING_APPROVAL", "AWAITING_PROOF"].includes(status)) return `${base} bg-warning/15 text-warning ring-warning/30`;
-  if (["REJECTED", "CANCELLED"].includes(status)) return `${base} bg-danger/15 text-danger ring-danger/30`;
+  if (["PAYOUT_READY", "PAID", "APPROVED", "RELEASED"].includes(status)) return `${base} bg-success/15 text-success ring-success/30`;
+  if (["PAYOUT_HOLD", "AWAITING_APPROVAL", "AWAITING_PROOF", "OVER_NTE", "ON_HOLD"].includes(status)) return `${base} bg-warning/15 text-warning ring-warning/30`;
+  if (["REJECTED", "CANCELLED", "FAILED"].includes(status)) return `${base} bg-danger/15 text-danger ring-danger/30`;
   return `${base} bg-white/10 text-muted ring-white/10`;
 }
 
@@ -130,6 +131,49 @@ export default async function WorkOrderDetailPage({ params }: { params: { id: st
                   <p className="text-sm text-muted">No proof template attached. Attach one before allowing proof submission.</p>
                   <AttachProofTemplateForm workOrderId={workOrder.id} proofTemplates={proofTemplates} />
                 </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-xl font-semibold">Invoice approval</h2>
+              {workOrder.invoice ? (
+                <div className="mt-4 rounded-xl border border-border bg-background p-4 text-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-semibold">{workOrder.invoice.invoiceNumber || "Invoice"}</p>
+                      <p className="mt-1 text-muted">Amount: ${workOrder.invoice.invoiceAmount.toLocaleString()}</p>
+                      <p className="mt-1 text-muted">Approved: {workOrder.invoice.approvedAmount ? `$${workOrder.invoice.approvedAmount.toLocaleString()}` : "Not approved"}</p>
+                    </div>
+                    <span className={statusBadge(workOrder.invoice.status)}>{workOrder.invoice.status}</span>
+                  </div>
+                  {workOrder.invoice.status !== "APPROVED" && workOrder.invoice.status !== "REJECTED" && workOrder.invoice.status !== "PAID" ? (
+                    <InvoiceReviewButtons invoiceId={workOrder.invoice.id} />
+                  ) : null}
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <SubmitInvoiceForm workOrderId={workOrder.id} vendorId={workOrder.vendorId} />
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-xl font-semibold">Payout control</h2>
+              {workOrder.payout ? (
+                <div className="mt-4 rounded-xl border border-border bg-background p-4 text-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-semibold">Gross: ${workOrder.payout.grossAmount.toLocaleString()}</p>
+                      <p className="mt-1 text-muted">Platform fee: ${workOrder.payout.platformFee.toLocaleString()}</p>
+                      <p className="mt-1 text-muted">Net vendor amount: ${workOrder.payout.netVendorAmount.toLocaleString()}</p>
+                    </div>
+                    <span className={statusBadge(workOrder.payout.status)}>{workOrder.payout.status}</span>
+                  </div>
+                  {workOrder.payout.holdReason ? <p className="mt-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-warning">{workOrder.payout.holdReason}</p> : null}
+                  {workOrder.payout.status === "READY" ? <ReleasePayoutButton payoutId={workOrder.payout.id} /> : null}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-muted">No payout object yet. Approve an invoice to create payout readiness.</p>
               )}
             </div>
           </div>
