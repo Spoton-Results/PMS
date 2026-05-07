@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { AddDocumentForm, DocumentReviewButtons, ReevaluateVendorButton } from "./document-actions";
 
 function statusClass(status: string) {
   if (status === "GREEN") return "bg-success/15 text-success ring-success/30";
@@ -55,7 +56,7 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="text-xl font-semibold">Controls</h2>
               <div className="mt-4 grid gap-3">
-                <button className="rounded-xl border border-border bg-background px-4 py-3 text-left text-sm">Re-evaluate eligibility</button>
+                <ReevaluateVendorButton vendorId={vendor.id} />
                 <button className="rounded-xl border border-border bg-background px-4 py-3 text-left text-sm">Suspend vendor</button>
                 <button className="rounded-xl border border-border bg-background px-4 py-3 text-left text-sm">Start Stripe onboarding</button>
               </div>
@@ -65,17 +66,22 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
           <div className="space-y-6">
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="text-xl font-semibold">Compliance documents</h2>
+              <AddDocumentForm vendorId={vendor.id} />
               <div className="mt-4 space-y-3">
                 {vendor.documents.length === 0 ? (
                   <p className="text-sm text-muted">No documents uploaded.</p>
                 ) : (
                   vendor.documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3 text-sm">
-                      <div>
-                        <p className="font-medium">{doc.documentType}</p>
-                        <p className="text-xs text-muted">Expires: {doc.expirationDate ? doc.expirationDate.toDateString() : "No expiration"}</p>
+                    <div key={doc.id} className="rounded-xl border border-border bg-background px-4 py-3 text-sm">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-medium">{doc.documentType}</p>
+                          <p className="text-xs text-muted">Expires: {doc.expirationDate ? doc.expirationDate.toDateString() : "No expiration"}</p>
+                          <p className="mt-1 text-xs text-muted">Coverage: {doc.coverageAmount ? `$${doc.coverageAmount.toLocaleString()}` : "Not set"}</p>
+                        </div>
+                        <span className="text-muted">{doc.status}</span>
                       </div>
-                      <span className="text-muted">{doc.status}</span>
+                      <DocumentReviewButtons documentId={doc.id} />
                     </div>
                   ))
                 )}
