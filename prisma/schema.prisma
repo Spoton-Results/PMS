@@ -1,0 +1,334 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id         String      @id @default(cuid())
+  name       String
+  users      User[]
+  portfolios Portfolio[]
+  properties Property[]
+  vendors    Vendor[]
+  workOrders WorkOrder[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  email          String       @unique
+  role           UserRole
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  REGIONAL_MANAGER
+  PROPERTY_MANAGER
+  MAINTENANCE_COORDINATOR
+  AP_REVIEWER
+  COMPLIANCE_REVIEWER
+  VENDOR_USER
+}
+
+model Portfolio {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  properties     Property[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Property {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  portfolioId    String?
+  portfolio      Portfolio?   @relation(fields: [portfolioId], references: [id])
+  name           String
+  address        String?
+  city           String?
+  state          String?
+  zip            String?
+  units          Unit[]
+  workOrders     WorkOrder[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Unit {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  label      String
+  floor      String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Vendor {
+  id                       String                 @id @default(cuid())
+  organizationId            String
+  organization              Organization           @relation(fields: [organizationId], references: [id])
+  legalName                 String
+  dbaName                   String?
+  contactName               String?
+  email                     String
+  phone                     String?
+  businessType              String?
+  primaryTrade              String?
+  serviceRegions            String[]
+  serviceCategories         String[]
+  eligibilityStatus         VendorEligibility      @default(RED)
+  eligibilityReason         String?
+  stripeConnectAccountId    String?
+  stripeOnboardingStatus    StripeOnboardingStatus @default(NOT_STARTED)
+  payoutStatus              PayoutAccountStatus    @default(NOT_READY)
+  documents                 VendorDocument[]
+  workOrders                WorkOrder[]
+  invoices                  Invoice[]
+  payouts                   Payout[]
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+}
+
+enum VendorEligibility {
+  GREEN
+  YELLOW
+  RED
+}
+
+enum StripeOnboardingStatus {
+  NOT_STARTED
+  PENDING
+  COMPLETE
+  RESTRICTED
+}
+
+enum PayoutAccountStatus {
+  READY
+  NOT_READY
+  FAILED
+  RESTRICTED
+}
+
+model VendorDocument {
+  id              String         @id @default(cuid())
+  vendorId        String
+  vendor          Vendor         @relation(fields: [vendorId], references: [id])
+  documentType    DocumentType
+  fileUrl         String
+  status          DocumentStatus @default(PENDING)
+  expirationDate  DateTime?
+  coverageAmount  Int?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+enum DocumentType {
+  W9
+  GENERAL_LIABILITY
+  WORKERS_COMP
+  BUSINESS_LICENSE
+  TRADE_LICENSE
+  COI
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+model WorkOrder {
+  id                     String            @id @default(cuid())
+  organizationId         String
+  organization           Organization      @relation(fields: [organizationId], references: [id])
+  propertyId             String
+  property               Property          @relation(fields: [propertyId], references: [id])
+  unitId                 String?
+  vendorId               String?
+  vendor                 Vendor?           @relation(fields: [vendorId], references: [id])
+  title                  String
+  description            String?
+  jobCategory            String
+  priority               WorkPriority      @default(NORMAL)
+  status                 WorkOrderStatus   @default(NEW)
+  nteAmount              Int?
+  approvedEstimateAmount Int?
+  proofTemplateId        String?
+  dueDate                DateTime?
+  slaDeadline            DateTime?
+  invoice                Invoice?
+  payout                 Payout?
+  proofSubmissions       ProofSubmission[]
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+}
+
+enum WorkPriority {
+  LOW
+  NORMAL
+  HIGH
+  EMERGENCY
+}
+
+enum WorkOrderStatus {
+  NEW
+  UNASSIGNED
+  ASSIGNED
+  ACCEPTED
+  IN_PROGRESS
+  AWAITING_PROOF
+  PROOF_SUBMITTED
+  AWAITING_APPROVAL
+  APPROVED
+  INVOICE_SUBMITTED
+  PAYOUT_READY
+  PAYOUT_HOLD
+  PAID
+  REJECTED
+  CANCELLED
+}
+
+model ProofTemplate {
+  id             String             @id @default(cuid())
+  organizationId String
+  jobCategory    String
+  name           String
+  description    String?
+  requirements   ProofRequirement[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model ProofRequirement {
+  id              String               @id @default(cuid())
+  proofTemplateId String
+  proofTemplate   ProofTemplate        @relation(fields: [proofTemplateId], references: [id])
+  type            ProofRequirementType
+  label           String
+  required        Boolean              @default(true)
+  sortOrder       Int
+  submissions     ProofSubmission[]
+}
+
+enum ProofRequirementType {
+  PHOTO
+  VIDEO
+  CHECKBOX
+  TEXT
+  NUMBER
+  SIGNATURE
+  GPS
+  FILE
+}
+
+model ProofSubmission {
+  id                 String           @id @default(cuid())
+  workOrderId         String
+  workOrder           WorkOrder        @relation(fields: [workOrderId], references: [id])
+  proofRequirementId  String
+  proofRequirement    ProofRequirement @relation(fields: [proofRequirementId], references: [id])
+  vendorId            String
+  fileUrl             String?
+  textValue           String?
+  checkboxValue       Boolean?
+  gpsLat              Float?
+  gpsLng              Float?
+  submittedAt         DateTime         @default(now())
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  workOrderId    String        @unique
+  workOrder      WorkOrder     @relation(fields: [workOrderId], references: [id])
+  vendorId       String
+  vendor         Vendor        @relation(fields: [vendorId], references: [id])
+  invoiceNumber  String?
+  invoiceAmount  Int
+  laborAmount    Int?
+  materialsAmount Int?
+  approvedAmount Int?
+  status         InvoiceStatus @default(SUBMITTED)
+  rejectionReason String?
+  submittedAt    DateTime      @default(now())
+  approvedBy     String?
+  approvedAt     DateTime?
+  payout         Payout?
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  OVER_NTE
+  PAYOUT_READY
+  PAYOUT_HOLD
+  PAID
+}
+
+model Payout {
+  id              String       @id @default(cuid())
+  invoiceId        String       @unique
+  invoice          Invoice      @relation(fields: [invoiceId], references: [id])
+  workOrderId      String       @unique
+  workOrder        WorkOrder    @relation(fields: [workOrderId], references: [id])
+  vendorId         String
+  vendor           Vendor       @relation(fields: [vendorId], references: [id])
+  grossAmount      Int
+  platformFee      Int
+  payoutFee        Int?
+  netVendorAmount  Int
+  status           PayoutStatus @default(NOT_READY)
+  holdReason       String?
+  stripeTransferId String?
+  stripePayoutId   String?
+  releasedBy       String?
+  releasedAt       DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+enum PayoutStatus {
+  NOT_READY
+  READY
+  ON_HOLD
+  RELEASED
+  PAID
+  FAILED
+  CANCELLED
+}
+
+model AuditEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  actorUserId    String?
+  actorType      String
+  entityType     String
+  entityId       String
+  action         String
+  beforeJson     Json?
+  afterJson      Json?
+  createdAt      DateTime @default(now())
+}
