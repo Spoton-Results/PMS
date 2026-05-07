@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Topbar } from "@/components/topbar";
 
 const navItems = [
   { href: "/", label: "Dashboard", description: "Portfolio control" },
@@ -9,7 +10,7 @@ const navItems = [
   { href: "/compliance", label: "Compliance", description: "Risk center" }
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export async function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[280px_1fr]">
       <aside className="border-b border-border bg-card/80 px-5 py-5 lg:min-h-screen lg:border-b-0 lg:border-r lg:py-6">
@@ -36,7 +37,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="min-w-0">{children}</div>
+      <div className="min-w-0">
+        <Topbar />
+        {children}
+      </div>
     </div>
   );
 }
