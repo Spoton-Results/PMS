@@ -10,16 +10,23 @@ No eligible vendor, no assignment.
 No valid proof, no invoice approval.  
 No green state, no payout.
 
-## MVP modules
+## Current MVP modules
 
+- Shared command-center navigation shell
+- Live dashboard metrics
 - Organization, portfolio, property, and unit structure
-- Vendor passport
-- Vendor compliance documents
+- Vendor passport index and detail pages
+- Vendor compliance document records
+- Document approval, rejection, expiration, and eligibility recalculation
 - Green, yellow, and red vendor eligibility status
-- Work orders
+- Work order creation and dispatch queue
+- Assignment gate that blocks red vendors and requires override for yellow vendors
 - Proof templates and proof submissions
-- Invoice approval
-- Payout readiness and payout holds
+- Proof completeness evaluation
+- Invoice submission, review, approval, and rejection
+- Payout readiness checks and payout holds
+- Manual payout release for MVP
+- Approval, payout, and compliance command centers
 - Audit events
 - Stripe Connect-ready fields
 
@@ -30,7 +37,7 @@ No green state, no payout.
 - Tailwind CSS
 - Prisma
 - PostgreSQL
-- Stripe Connect
+- Stripe Connect-ready architecture
 
 ## Local setup
 
@@ -60,6 +67,18 @@ Run migrations:
 npm run prisma:migrate
 ```
 
+Seed demo data:
+
+```bash
+npm run prisma:seed
+```
+
+Run type and rule checks:
+
+```bash
+npm run check
+```
+
 Start development server:
 
 ```bash
@@ -78,14 +97,58 @@ Health check:
 http://localhost:3000/api/health
 ```
 
-## First build target
+## App routes
 
-The first working version should let a property operator:
+```txt
+/                 Dashboard
+/vendors          Vendor Passport Index
+/vendors/new      Create Vendor Passport
+/vendors/[id]     Vendor Passport Detail
+/work-orders      Work Queue
+/work-orders/new  Create Work Order
+/work-orders/[id] Work Order Detail
+/approvals        Approval Center
+/payouts          Payout Control Center
+/compliance       Compliance Command Center
+```
 
-1. Create a vendor passport.
-2. Upload and review compliance documents.
-3. Evaluate vendor eligibility.
-4. Create a work order.
-5. Block red vendors from assignment.
-6. Require a proof pack before approval.
-7. Hold payout if proof, invoice, compliance, or Stripe onboarding is incomplete.
+## API routes
+
+```txt
+GET  /api/health
+POST /api/bootstrap
+GET  /api/vendors
+POST /api/vendors
+GET  /api/vendors/[id]/documents
+POST /api/vendors/[id]/documents
+PATCH /api/vendor-documents/[id]/review
+POST /api/vendors/[id]/reevaluate
+GET  /api/work-orders
+POST /api/work-orders
+POST /api/work-orders/[id]/assign
+PATCH /api/work-orders/[id]/proof-template
+GET  /api/work-orders/[id]/proof
+POST /api/work-orders/[id]/proof
+POST /api/work-orders/[id]/invoice
+PATCH /api/invoices/[id]/review
+POST /api/payouts/[id]/release
+GET  /api/proof-templates
+POST /api/proof-templates
+```
+
+## Demo flow
+
+1. Seed the database.
+2. Open `/vendors` and review green/red vendors.
+3. Open `/work-orders` and create or open a work order.
+4. Try assigning a red vendor and confirm the assignment is blocked.
+5. Assign a green vendor.
+6. Submit all required proof items.
+7. Submit an invoice.
+8. Approve the invoice.
+9. Confirm payout becomes READY or ON_HOLD with a reason.
+10. Release a READY payout manually.
+
+## Next build target
+
+The next major layer should be authentication and organization scoping. MVP pages currently use seeded demo organization records so the proof-to-pay control loop can be built and tested quickly.
