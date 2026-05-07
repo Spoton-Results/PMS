@@ -78,6 +78,66 @@ async function main() {
       payoutStatus: "NOT_READY"
     }
   });
+
+  const plumbingTemplate = await prisma.proofTemplate.upsert({
+    where: { id: "seed-proof-plumbing" },
+    update: {},
+    create: {
+      id: "seed-proof-plumbing",
+      organizationId: organization.id,
+      jobCategory: "Plumbing",
+      name: "Plumbing Repair Proof Pack",
+      description: "Required proof for plumbing repairs before invoice approval.",
+      requirements: {
+        create: [
+          { type: "PHOTO", label: "Before photo", required: true, sortOrder: 1 },
+          { type: "PHOTO", label: "After photo", required: true, sortOrder: 2 },
+          { type: "TEXT", label: "Repair summary", required: true, sortOrder: 3 },
+          { type: "CHECKBOX", label: "Leak tested and confirmed complete", required: true, sortOrder: 4 }
+        ]
+      }
+    }
+  });
+
+  await prisma.proofTemplate.upsert({
+    where: { id: "seed-proof-turn-clean" },
+    update: {},
+    create: {
+      id: "seed-proof-turn-clean",
+      organizationId: organization.id,
+      jobCategory: "Turn Cleaning",
+      name: "Turn Cleaning Proof Pack",
+      description: "Required proof for unit turns and cleaning completion.",
+      requirements: {
+        create: [
+          { type: "PHOTO", label: "Kitchen after photo", required: true, sortOrder: 1 },
+          { type: "PHOTO", label: "Bathroom after photo", required: true, sortOrder: 2 },
+          { type: "PHOTO", label: "Living area after photo", required: true, sortOrder: 3 },
+          { type: "CHECKBOX", label: "Trash removed", required: true, sortOrder: 4 },
+          { type: "TEXT", label: "Completion note", required: true, sortOrder: 5 }
+        ]
+      }
+    }
+  });
+
+  await prisma.workOrder.upsert({
+    where: { id: "seed-work-plumbing" },
+    update: {},
+    create: {
+      id: "seed-work-plumbing",
+      organizationId: organization.id,
+      propertyId: "seed-property",
+      vendorId: "seed-vendor-green",
+      title: "Kitchen sink leak",
+      description: "Repair leaking kitchen sink and submit required proof before invoice approval.",
+      jobCategory: "Plumbing",
+      priority: "HIGH",
+      status: "AWAITING_PROOF",
+      nteAmount: 500,
+      approvedEstimateAmount: 450,
+      proofTemplateId: plumbingTemplate.id
+    }
+  });
 }
 
 main()
