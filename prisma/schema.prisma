@@ -8,15 +8,16 @@ datasource db {
 }
 
 model Organization {
-  id         String      @id @default(cuid())
-  name       String
-  users      User[]
-  portfolios Portfolio[]
-  properties Property[]
-  vendors    Vendor[]
-  workOrders WorkOrder[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id           String        @id @default(cuid())
+  name         String
+  users        User[]
+  portfolios   Portfolio[]
+  properties   Property[]
+  vendors      Vendor[]
+  workOrders   WorkOrder[]
+  uploadAssets UploadAsset[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model User {
@@ -101,6 +102,7 @@ model Vendor {
   workOrders                WorkOrder[]
   invoices                  Invoice[]
   payouts                   Payout[]
+  uploadAssets              UploadAsset[]
   createdAt                 DateTime               @default(now())
   updatedAt                 DateTime               @updatedAt
 }
@@ -131,6 +133,7 @@ model VendorDocument {
   vendor          Vendor         @relation(fields: [vendorId], references: [id])
   documentType    DocumentType
   fileUrl         String
+  fileKey         String?
   status          DocumentStatus @default(PENDING)
   expirationDate  DateTime?
   coverageAmount  Int?
@@ -180,6 +183,7 @@ model WorkOrder {
   invoice                Invoice?
   payout                 Payout?
   proofSubmissions       ProofSubmission[]
+  uploadAssets           UploadAsset[]
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
 }
@@ -250,6 +254,7 @@ model ProofSubmission {
   proofRequirement    ProofRequirement @relation(fields: [proofRequirementId], references: [id])
   vendorId            String
   fileUrl             String?
+  fileKey             String?
   textValue           String?
   checkboxValue       Boolean?
   gpsLat              Float?
@@ -258,22 +263,23 @@ model ProofSubmission {
 }
 
 model Invoice {
-  id             String        @id @default(cuid())
-  workOrderId    String        @unique
-  workOrder      WorkOrder     @relation(fields: [workOrderId], references: [id])
-  vendorId       String
-  vendor         Vendor        @relation(fields: [vendorId], references: [id])
-  invoiceNumber  String?
-  invoiceAmount  Int
-  laborAmount    Int?
+  id              String        @id @default(cuid())
+  workOrderId     String        @unique
+  workOrder       WorkOrder     @relation(fields: [workOrderId], references: [id])
+  vendorId        String
+  vendor          Vendor        @relation(fields: [vendorId], references: [id])
+  invoiceNumber   String?
+  invoiceAmount   Int
+  laborAmount     Int?
   materialsAmount Int?
-  approvedAmount Int?
-  status         InvoiceStatus @default(SUBMITTED)
+  approvedAmount  Int?
+  status          InvoiceStatus @default(SUBMITTED)
   rejectionReason String?
-  submittedAt    DateTime      @default(now())
-  approvedBy     String?
-  approvedAt     DateTime?
-  payout         Payout?
+  submittedAt     DateTime      @default(now())
+  approvedBy      String?
+  approvedAt      DateTime?
+  payout          Payout?
+  uploadAssets    UploadAsset[]
 }
 
 enum InvoiceStatus {
@@ -318,6 +324,32 @@ enum PayoutStatus {
   PAID
   FAILED
   CANCELLED
+}
+
+model UploadAsset {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  vendorId       String?
+  vendor         Vendor?       @relation(fields: [vendorId], references: [id])
+  workOrderId    String?
+  workOrder      WorkOrder?    @relation(fields: [workOrderId], references: [id])
+  invoiceId      String?
+  invoice        Invoice?      @relation(fields: [invoiceId], references: [id])
+  purpose        UploadPurpose
+  storageKey     String
+  fileUrl        String
+  filename       String
+  contentType    String
+  sizeBytes      Int?
+  createdBy      String?
+  createdAt      DateTime      @default(now())
+}
+
+enum UploadPurpose {
+  VENDOR_DOCUMENT
+  PROOF_MEDIA
+  INVOICE_ATTACHMENT
 }
 
 model AuditEvent {
