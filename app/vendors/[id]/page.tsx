@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AddDocumentForm, DocumentReviewButtons, ReevaluateVendorButton } from "./document-actions";
+import { StripeConnectActions } from "./stripe-actions";
 
 function statusClass(status: string) {
-  if (status === "GREEN") return "bg-success/15 text-success ring-success/30";
-  if (status === "YELLOW") return "bg-warning/15 text-warning ring-warning/30";
+  if (status === "GREEN" || status === "READY" || status === "COMPLETE") return "bg-success/15 text-success ring-success/30";
+  if (status === "YELLOW" || status === "PENDING" || status === "NOT_READY") return "bg-warning/15 text-warning ring-warning/30";
   return "bg-danger/15 text-danger ring-danger/30";
 }
 
@@ -45,11 +46,44 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
                 <div className="flex justify-between gap-4"><dt className="text-muted">Contact</dt><dd>{vendor.contactName || "Not set"}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="text-muted">Phone</dt><dd>{vendor.phone || "Not set"}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="text-muted">Trade</dt><dd>{vendor.primaryTrade || "Not set"}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-muted">Stripe</dt><dd>{vendor.stripeOnboardingStatus}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-muted">Payouts</dt><dd>{vendor.payoutStatus}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-muted">Stripe onboarding</dt><dd><span className={`rounded-full px-2 py-1 text-xs ring-1 ${statusClass(vendor.stripeOnboardingStatus)}`}>{vendor.stripeOnboardingStatus}</span></dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-muted">Payout account</dt><dd><span className={`rounded-full px-2 py-1 text-xs ring-1 ${statusClass(vendor.payoutStatus)}`}>{vendor.payoutStatus}</span></dd></div>
               </dl>
               <div className="mt-5 rounded-xl border border-border bg-background p-4 text-sm text-muted">
                 {vendor.eligibilityReason || "No eligibility reason recorded."}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-xl font-semibold">Payout onboarding</h2>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-border bg-background p-4 text-sm">
+                  <p className="text-xs uppercase tracking-wide text-muted">Connect account</p>
+                  <p className="mt-2 font-semibold">
+                    {vendor.stripeConnectAccountId ? "Connected" : "Not created"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted break-all">
+                    {vendor.stripeConnectAccountId || "No Stripe Connect account yet."}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border bg-background p-4 text-sm">
+                  <p className="text-xs uppercase tracking-wide text-muted">Payout readiness</p>
+                  <p className="mt-2 font-semibold">{vendor.payoutStatus}</p>
+                  <p className="mt-1 text-xs text-muted">
+                    {vendor.payoutStatus === "READY"
+                      ? "Vendor is eligible to receive payouts."
+                      : "Vendor payouts are currently blocked or incomplete."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <StripeConnectActions
+                  vendorId={vendor.id}
+                  hasStripeAccount={!!vendor.stripeConnectAccountId}
+                />
               </div>
             </div>
 
@@ -58,7 +92,6 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
               <div className="mt-4 grid gap-3">
                 <ReevaluateVendorButton vendorId={vendor.id} />
                 <button className="rounded-xl border border-border bg-background px-4 py-3 text-left text-sm">Suspend vendor</button>
-                <button className="rounded-xl border border-border bg-background px-4 py-3 text-left text-sm">Start Stripe onboarding</button>
               </div>
             </div>
           </div>
