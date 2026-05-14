@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { AssignVendorForm } from "./assignment-actions";
 import { AttachProofTemplateForm, ProofSubmissionPanel } from "./proof-actions";
 import { InvoiceReviewButtons, ReleasePayoutButton, SubmitInvoiceForm } from "./invoice-actions";
+import { ProofGallery } from "@/components/proof/proof-gallery";
 
 function statusBadge(status: string) {
   const base = "rounded-full px-3 py-1 text-xs font-semibold ring-1";
@@ -19,7 +20,14 @@ export default async function WorkOrderDetailPage({ params }: { params: { id: st
     include: {
       property: true,
       vendor: true,
-      proofSubmissions: true,
+      proofSubmissions: {
+        include: {
+          proofRequirement: true
+        },
+        orderBy: {
+          submittedAt: "desc"
+        }
+      },
       invoice: true,
       payout: true
     }
@@ -106,6 +114,20 @@ export default async function WorkOrderDetailPage({ params }: { params: { id: st
                   <p className="text-xs text-muted">Payout</p>
                   <p className="mt-2 text-sm font-semibold">{workOrder.payout?.status || "Not ready"}</p>
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold">Proof review gallery</h2>
+                  <p className="mt-1 text-sm text-muted">Operational evidence submitted for this work order.</p>
+                </div>
+                <span className={statusBadge(workOrder.status)}>{workOrder.status}</span>
+              </div>
+
+              <div className="mt-5">
+                <ProofGallery submissions={workOrder.proofSubmissions} />
               </div>
             </div>
 
