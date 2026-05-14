@@ -16,6 +16,7 @@ model Organization {
   vendors      Vendor[]
   workOrders   WorkOrder[]
   uploadAssets UploadAsset[]
+  approvals    Approval[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -184,6 +185,7 @@ model WorkOrder {
   payout                 Payout?
   proofSubmissions       ProofSubmission[]
   uploadAssets           UploadAsset[]
+  approvals              Approval[]
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
 }
@@ -205,6 +207,7 @@ enum WorkOrderStatus {
   PROOF_SUBMITTED
   AWAITING_APPROVAL
   APPROVED
+  REWORK_REQUESTED
   INVOICE_SUBMITTED
   PAYOUT_READY
   PAYOUT_HOLD
@@ -259,7 +262,18 @@ model ProofSubmission {
   checkboxValue       Boolean?
   gpsLat              Float?
   gpsLng              Float?
+  reviewStatus        ProofReviewStatus @default(PENDING)
+  reviewedBy          String?
+  reviewedAt          DateTime?
+  reviewNote          String?
   submittedAt         DateTime         @default(now())
+}
+
+enum ProofReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REWORK_REQUESTED
 }
 
 model Invoice {
@@ -350,6 +364,49 @@ enum UploadPurpose {
   VENDOR_DOCUMENT
   PROOF_MEDIA
   INVOICE_ATTACHMENT
+}
+
+model Approval {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  workOrderId    String?
+  workOrder      WorkOrder?     @relation(fields: [workOrderId], references: [id])
+  entityType     ApprovalEntityType
+  entityId       String
+  type           ApprovalType
+  status         ApprovalStatus @default(PENDING)
+  requestedBy    String?
+  requestedAt    DateTime       @default(now())
+  decidedBy      String?
+  decidedAt      DateTime?
+  decisionNote   String?
+  metadata       Json?
+}
+
+enum ApprovalEntityType {
+  WORK_ORDER
+  PROOF_SUBMISSION
+  INVOICE
+  PAYOUT
+  VENDOR
+}
+
+enum ApprovalType {
+  PROOF_REVIEW
+  INVOICE_REVIEW
+  PAYOUT_RELEASE
+  OVERRIDE
+  CHANGE_ORDER
+  REWORK
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REWORK_REQUESTED
+  CANCELLED
 }
 
 model AuditEvent {
